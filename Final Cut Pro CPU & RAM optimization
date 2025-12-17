@@ -1,0 +1,110 @@
+import psutil
+import subprocess
+import os
+import time
+from datetime import datetime
+
+# -------------------------------
+# SETTINGS
+# -------------------------------
+CPU_THRESHOLD = 80           # % CPU usage for FCP before throttling background
+BG_CPU_LIMIT = 10            # % CPU for other processes when FCP is active
+MEM_THRESHOLD = 85           # % RAM usage to trigger cleanup
+REFRESH_INTERVAL = 5         # seconds
+FCPO_RENDER_PATH = os.path.expanduser("~/Movies/Final Cut Pro/Render Files")
+LOG_FILE = os.path.expanduser("~/fcpe_manager.log")
+
+# -------------------------------
+# LOGGING
+# -------------------------------
+def log(msg):
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    print(f"[{timestamp}] {msg}")
+    with open(LOG_FILE, "a") as f:
+        f.write(f"[{timestamp}] {msg}\n")
+
+# -------------------------------
+# FCP DETECTION
+# -------------------------------
+def get_fcp_process():
+    for proc in psutil.process_iter(['name', 'pid', 'cpu_percent', 'memory_info']):
+        if 'Final Cut Pro' in proc.info['name']:
+            return proc
+    return None
+
+# -------------------------------
+# RESOURCE MANAGEMENT
+# -------------------------------
+def throttle_background(fcp_running):
+    for proc in psutil.process_iter(['name', 'pid', 'cpu_percent']):
+        try:
+            if 'Final Cut Pro' in proc.info['name']:
+                continue
+            cpu = proc.cpu_percent(interval=0.1)
+            if fcp_running and cpu > BG_CPU_LIMIT:
+                p = psutil.Process(proc.pid)
+                p.nice(10)  # lower priority
+        except (psutil.NoSuchProcess, psutil.AccessDenied):
+            continue
+
+def manage_memory():
+    mem = psutil.virtual_memory()
+    if mem.percent > MEM_THRESHOLD:
+        log(f"⚠️ High RAM usage: {mem.percent}%")
+        # Optional: clean FCP render files
+        if os.path.exists(FCPO_RENDER_PATH):
+            try:
+                for root, dirs, files in os.walk(FCPO_RENDER_PATH):
+                    for f in files:
+                        os.remove(os.path.join(root, f))
+                log("🗑 Freed memory by clearing render files")
+            except Exception as e:
+                log(f"❌ Error cleaning render files: {e}")
+
+# -------------------------------
+# CPU MONITORING
+# -------------------------------
+def cpu_usage(fcp_proc):
+    overall_cpu = psutil.cpu_percent(interval=1)
+    if fcp_proc:
+        try:
+            fcp_cpu = fcp_proc.cpu_percent(interval=0.1)
+            fcp_mem = fcp_proc.memory_info().rss / (1024 * 1024)  # MB
+        except (psutil.NoSuchProcess, psutil.AccessDenied):
+            fcp_cpu = 0
+            fcp_mem = 0
+    else:
+        fcp_cpu = 0
+        fcp_mem = 0
+    log(f"💻 Overall CPU: {overall_cpu:.1f}%, FCP CPU: {fcp_cpu:.1f}%, FCP RAM: {fcp_mem:.1f} MB")
+
+# Optional macOS notification
+def notify(message):
+    subprocess.run([
+        'osascript',
+        '-e',
+        f'display notification "{message}" with title "FCP Efficiency Manager"'
+    ])
+
+# -------------------------------
+# MAIN LOOP
+# -------------------------------
+def main():
+    log("🚀 FCP Efficiency Manager Started")
+
+    while True:
+        fcp = get_fcp_process()
+        fcp_running = fcp is not None
+
+        if fcp_running:
+            log(f"🎬 Final Cut Pro running (PID {fcp.pid})")
+            throttle_background(fcp_running)
+            manage_memory()
+        else:
+            log("❌ FCP not running")
+
+        cpu_usage(fcp)
+        time.sleep(REFRESH_INTERVAL)
+
+if __name__ == "__main__":
+    main()
