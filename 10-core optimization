@@ -1,0 +1,14 @@
+import multiprocessing as mp
+import os
+
+def work(x):
+    return x * x
+
+if __name__ == "__main__":
+    cores = mp.cpu_count()
+    print(f"Using {cores} CPU cores")
+
+    with mp.Pool(cores) as pool:
+        results = pool.map(work, range(10_000_000))
+
+    print("Done")
