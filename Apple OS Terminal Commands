@@ -1,5 +1,7 @@
 # Required Python Libraries
 pip install psutil
+pip3 install psutil rumps
+
 
 # Homebrew
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
