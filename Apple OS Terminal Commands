@@ -1,6 +1,7 @@
 # Required Python Libraries
 pip install psutil
 pip3 install psutil rumps
+sudo powermetrics --samplers gpu_power -n 1
 
 
 # Homebrew
