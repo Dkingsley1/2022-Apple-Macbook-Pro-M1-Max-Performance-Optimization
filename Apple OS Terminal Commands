@@ -7,3 +7,7 @@ sudo powermetrics --samplers gpu_power -n 1
 # Homebrew
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 
+# Rosetta 2: Intel to Apple Silicon Translator
+softwareupdate --install-rosetta
+arch -x86_64 zsh
+
