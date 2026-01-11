@@ -1,0 +1,54 @@
+import timeit
+
+INDEX = 5000
+N = 10_000
+ITERATIONS = 1_000_000
+
+# Python list
+list_time = timeit.timeit(
+    stmt="x = my_list[INDEX]",
+    setup="""
+from __main__ import INDEX, N
+my_list = list(range(N))
+""",
+    number=ITERATIONS
+)
+
+# collections.deque
+deque_time = timeit.timeit(
+    stmt="x = my_deque[INDEX]",
+    setup="""
+from __main__ import INDEX, N
+from collections import deque
+my_deque = deque(range(N))
+""",
+    number=ITERATIONS
+)
+
+# array.array (C-style contiguous memory)
+array_time = timeit.timeit(
+    stmt="x = my_array[INDEX]",
+    setup="""
+from __main__ import INDEX, N
+from array import array
+my_array = array('i', range(N))
+""",
+    number=ITERATIONS
+)
+
+# NumPy array
+numpy_time = timeit.timeit(
+    stmt="x = my_np[INDEX]",
+    setup="""
+from __main__ import INDEX, N
+import numpy as np
+my_np = np.arange(N)
+""",
+    number=ITERATIONS
+)
+
+print(f"Index access benchmark ({ITERATIONS:,} iterations)")
+print(f"List:        {list_time:.5f} seconds")
+print(f"Deque:       {deque_time:.5f} seconds")
+print(f"array.array: {array_time:.5f} seconds")
+print(f"NumPy:       {numpy_time:.5f} seconds")
